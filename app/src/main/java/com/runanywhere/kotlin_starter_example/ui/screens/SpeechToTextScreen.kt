@@ -2,6 +2,9 @@ package com.runanywhere.kotlin_starter_example.ui.screens
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.media.AudioFormat
+import android.media.AudioRecord
+import android.media.MediaRecorder
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.*
@@ -29,7 +32,78 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.runanywhere.kotlin_starter_example.services.ModelService
 import com.runanywhere.kotlin_starter_example.ui.components.ModelLoaderWidget
 import com.runanywhere.kotlin_starter_example.ui.theme.*
+import com.runanywhere.sdk.public.RunAnywhere
+import com.runanywhere.sdk.public.extensions.transcribe
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.ByteArrayOutputStream
+
+// Audio recording helper class
+private class AudioRecorder {
+    private var audioRecord: AudioRecord? = null
+    private var isRecording = false
+    private val audioData = ByteArrayOutputStream()
+    
+    companion object {
+        const val SAMPLE_RATE = 16000 // 16kHz for STT
+        const val CHANNEL_CONFIG = AudioFormat.CHANNEL_IN_MONO
+        const val AUDIO_FORMAT = AudioFormat.ENCODING_PCM_16BIT
+    }
+    
+    fun startRecording(): Boolean {
+        val bufferSize = AudioRecord.getMinBufferSize(SAMPLE_RATE, CHANNEL_CONFIG, AUDIO_FORMAT)
+        if (bufferSize == AudioRecord.ERROR || bufferSize == AudioRecord.ERROR_BAD_VALUE) {
+            return false
+        }
+        
+        try {
+            audioRecord = AudioRecord(
+                MediaRecorder.AudioSource.MIC,
+                SAMPLE_RATE,
+                CHANNEL_CONFIG,
+                AUDIO_FORMAT,
+                bufferSize * 2
+            )
+            
+            if (audioRecord?.state != AudioRecord.STATE_INITIALIZED) {
+                return false
+            }
+            
+            audioData.reset()
+            audioRecord?.startRecording()
+            isRecording = true
+            
+            // Start reading audio in a thread
+            Thread {
+                val buffer = ByteArray(bufferSize)
+                while (isRecording) {
+                    val read = audioRecord?.read(buffer, 0, buffer.size) ?: 0
+                    if (read > 0) {
+                        synchronized(audioData) {
+                            audioData.write(buffer, 0, read)
+                        }
+                    }
+                }
+            }.start()
+            
+            return true
+        } catch (e: SecurityException) {
+            return false
+        }
+    }
+    
+    fun stopRecording(): ByteArray {
+        isRecording = false
+        audioRecord?.stop()
+        audioRecord?.release()
+        audioRecord = null
+        
+        synchronized(audioData) {
+            return audioData.toByteArray()
+        }
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -43,6 +117,9 @@ fun SpeechToTextScreen(
     var transcription by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var hasPermission by remember { mutableStateOf(false) }
+    
+    // Audio recorder instance
+    val audioRecorder = remember { AudioRecorder() }
     
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -143,28 +220,49 @@ fun SpeechToTextScreen(
                     isTranscribing = isTranscribing,
                     onClick = {
                         if (!isRecording && !isTranscribing) {
-                            isRecording = true
+                            // Start recording
                             scope.launch {
                                 try {
-                                    // Start recording - this is a placeholder
-                                    // In a real implementation, you would use Android's MediaRecorder
-                                    // or AudioRecord to capture audio
-                                    errorMessage = "Recording started..."
+                                    val started = withContext(Dispatchers.IO) {
+                                        audioRecorder.startRecording()
+                                    }
+                                    if (started) {
+                                        isRecording = true
+                                        errorMessage = null
+                                    } else {
+                                        errorMessage = "Failed to start audio recording"
+                                    }
                                 } catch (e: Exception) {
                                     errorMessage = "Recording failed: ${e.message}"
-                                    isRecording = false
                                 }
                             }
                         } else if (isRecording) {
+                            // Stop recording and transcribe
                             isRecording = false
                             isTranscribing = true
                             scope.launch {
                                 try {
-                                    // Stop recording and transcribe
-                                    // This is a placeholder - implement audio recording
-                                    errorMessage = "Transcription coming soon. Please implement audio recording."
-                                    // val audioData = stopRecordingAndGetBytes()
-                                    // transcription = RunAnywhere.transcribe(audioData)
+                                    // Stop recording and get audio data
+                                    val audioData = withContext(Dispatchers.IO) {
+                                        audioRecorder.stopRecording()
+                                    }
+                                    
+                                    if (audioData.isEmpty()) {
+                                        errorMessage = "No audio recorded"
+                                        return@launch
+                                    }
+                                    
+                                    // Transcribe using RunAnywhere SDK
+                                    val result = withContext(Dispatchers.IO) {
+                                        RunAnywhere.transcribe(audioData)
+                                    }
+                                    
+                                    if (result.isNotBlank()) {
+                                        transcription = result
+                                        errorMessage = null
+                                    } else {
+                                        errorMessage = "No speech detected"
+                                    }
                                 } catch (e: Exception) {
                                     errorMessage = "Transcription failed: ${e.message}"
                                 } finally {

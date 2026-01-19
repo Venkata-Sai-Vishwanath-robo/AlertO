@@ -74,10 +74,14 @@ dependencies {
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.coroutines.android)
     
-    // RunAnywhere SDK with all backends
-    implementation(libs.runanywhere.kotlin)
-    implementation(libs.runanywhere.llamacpp)
-    implementation(libs.runanywhere.onnx)
+    // RunAnywhere SDK from Maven Central (includes native libraries)
+    implementation("io.github.sanchitmonga22:runanywhere-sdk-android:0.16.1")
+
+    // LlamaCPP backend for LLM text generation (includes native libraries)
+    implementation("io.github.sanchitmonga22:runanywhere-llamacpp-android:0.16.1")
+
+    // ONNX backend for STT/TTS/VAD (includes native libraries)
+    implementation("io.github.sanchitmonga22:runanywhere-onnx-android:0.16.1")
     
     // Testing
     testImplementation(libs.junit)

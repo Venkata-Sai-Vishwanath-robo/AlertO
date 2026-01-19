@@ -5,22 +5,22 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.runanywhere.sdk.public.InferenceFramework
-import com.runanywhere.sdk.public.ModelCategory
+import com.runanywhere.sdk.core.types.InferenceFramework
 import com.runanywhere.sdk.public.RunAnywhere
-import com.runanywhere.sdk.public.registerModel
-import com.runanywhere.sdk.public.downloadModel
-import com.runanywhere.sdk.public.loadLLMModel
-import com.runanywhere.sdk.public.loadSTTModel
-import com.runanywhere.sdk.public.loadTTSVoice
-import com.runanywhere.sdk.public.unloadLLMModel
-import com.runanywhere.sdk.public.unloadSTTModel
-import com.runanywhere.sdk.public.unloadTTSVoice
-import com.runanywhere.sdk.public.isLLMModelLoaded
-import com.runanywhere.sdk.public.isSTTModelLoaded
-import com.runanywhere.sdk.public.isTTSVoiceLoaded
-import com.runanywhere.sdk.public.isVoiceAgentReady
-import com.runanywhere.sdk.public.availableModels
+import com.runanywhere.sdk.public.extensions.Models.ModelCategory
+import com.runanywhere.sdk.public.extensions.registerModel
+import com.runanywhere.sdk.public.extensions.downloadModel
+import com.runanywhere.sdk.public.extensions.loadLLMModel
+import com.runanywhere.sdk.public.extensions.loadSTTModel
+import com.runanywhere.sdk.public.extensions.loadTTSVoice
+import com.runanywhere.sdk.public.extensions.unloadLLMModel
+import com.runanywhere.sdk.public.extensions.unloadSTTModel
+import com.runanywhere.sdk.public.extensions.unloadTTSVoice
+import com.runanywhere.sdk.public.extensions.isLLMModelLoaded
+import com.runanywhere.sdk.public.extensions.isSTTModelLoaded
+import com.runanywhere.sdk.public.extensions.isTTSVoiceLoaded
+import com.runanywhere.sdk.public.extensions.isVoiceAgentReady
+import com.runanywhere.sdk.public.extensions.availableModels
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
 
@@ -82,6 +82,7 @@ class ModelService : ViewModel() {
                 name = "SmolLM2 360M Instruct Q8_0",
                 url = "https://huggingface.co/HuggingFaceTB/SmolLM2-360M-Instruct-GGUF/resolve/main/smollm2-360m-instruct-q8_0.gguf",
                 framework = InferenceFramework.LLAMA_CPP,
+                modality = ModelCategory.LANGUAGE,
                 memoryRequirement = 400_000_000 // ~400MB
             )
             
@@ -92,7 +93,7 @@ class ModelService : ViewModel() {
                 name = "Sherpa Whisper Tiny (ONNX)",
                 url = "https://github.com/RunanywhereAI/sherpa-onnx/releases/download/runanywhere-models-v1/sherpa-onnx-whisper-tiny.en.tar.gz",
                 framework = InferenceFramework.ONNX,
-                category = ModelCategory.SPEECH_RECOGNITION
+                modality = ModelCategory.SPEECH_RECOGNITION
             )
             
             // TTS Model - Piper TTS (US English - Medium quality)
@@ -102,7 +103,7 @@ class ModelService : ViewModel() {
                 name = "Piper TTS (US English - Medium)",
                 url = "https://github.com/RunanywhereAI/sherpa-onnx/releases/download/runanywhere-models-v1/vits-piper-en_US-lessac-medium.tar.gz",
                 framework = InferenceFramework.ONNX,
-                category = ModelCategory.SPEECH_SYNTHESIS
+                modality = ModelCategory.SPEECH_SYNTHESIS
             )
         }
     }

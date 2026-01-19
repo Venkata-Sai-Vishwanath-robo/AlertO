@@ -1,6 +1,6 @@
 [versions]
 agp = "8.13.2"
-kotlin = "2.0.21"
+kotlin = "2.2.0"
 coreKtx = "1.15.0"
 junit = "4.13.2"
 junitVersion = "1.2.1"
@@ -12,7 +12,7 @@ composeBom = "2024.12.01"
 lifecycleViewmodelCompose = "2.8.7"
 navigationCompose = "2.8.5"
 coroutines = "1.9.0"
-runanywhere = "0.16.0-test.39"
+runanywhere = "v0.16.0-test.53"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -38,10 +38,10 @@ androidx-navigation-compose = { group = "androidx.navigation", name = "navigatio
 kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "coroutines" }
 kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }
 
-# RunAnywhere SDK
-runanywhere-kotlin = { group = "ai.runanywhere", name = "runanywhere-kotlin", version.ref = "runanywhere" }
-runanywhere-llamacpp = { group = "ai.runanywhere", name = "runanywhere-llamacpp", version.ref = "runanywhere" }
-runanywhere-onnx = { group = "ai.runanywhere", name = "runanywhere-onnx", version.ref = "runanywhere" }
+# RunAnywhere SDK (via JitPack - no auth required)
+runanywhere-kotlin = { group = "com.github.RunanywhereAI.runanywhere-sdks", name = "runanywhere-kotlin", version.ref = "runanywhere" }
+runanywhere-llamacpp = { group = "com.github.RunanywhereAI.runanywhere-sdks", name = "runanywhere-llamacpp", version.ref = "runanywhere" }
+runanywhere-onnx = { group = "com.github.RunanywhereAI.runanywhere-sdks", name = "runanywhere-onnx", version.ref = "runanywhere" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

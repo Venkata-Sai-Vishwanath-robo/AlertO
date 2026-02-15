@@ -5,14 +5,17 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.lifecycle.viewmodel.compose.viewModel₹
-import androidx.navigation.NavHostController
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.runanywhere.kotlin_starter_example.services.ModelService
-import com.runanywhere.kotlin_starter_example.ui.screens.*
+import com.runanywhere.kotlin_starter_example.ui.screens.ChatScreen
+import com.runanywhere.kotlin_starter_example.ui.screens.HomeScreen
+import com.runanywhere.kotlin_starter_example.ui.screens.SpeechToTextScreen
+import com.runanywhere.kotlin_starter_example.ui.screens.TextToSpeechScreen
+import com.runanywhere.kotlin_starter_example.ui.screens.ToolCallingScreen
+import com.runanywhere.kotlin_starter_example.ui.screens.VoicePipelineScreen
 import com.runanywhere.kotlin_starter_example.ui.theme.KotlinStarterTheme
 import com.runanywhere.sdk.core.onnx.ONNX
 import com.runanywhere.sdk.foundation.bridge.extensions.CppBridgeModelPaths
@@ -20,7 +23,6 @@ import com.runanywhere.sdk.llm.llamacpp.LlamaCPP
 import com.runanywhere.sdk.public.RunAnywhere
 import com.runanywhere.sdk.public.SDKEnvironment
 import com.runanywhere.sdk.storage.AndroidPlatformContext
-import android.util.Log
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {

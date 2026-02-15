@@ -4,10 +4,12 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
@@ -73,6 +75,75 @@ fun ToolCallingScreen(
     
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
+    
+    // Suggestion prompts grouped by tool
+    val suggestionPrompts = remember {
+        listOf(
+            // Weather tool
+            "What's the weather in Tokyo?",
+            "How's the weather in London?",
+            "Is it raining in New York?",
+            // Time tool
+            "What time is it?",
+            "What's the current date and time?",
+            // Calculator tool
+            "Calculate 15 * 7 + 23",
+            "What is (100 - 37) / 9?",
+            "Compute 2.5 * 4 + 10",
+        )
+    }
+    
+    // Send message handler shared by input field and suggestion chips
+    val sendMessage: (String) -> Unit = { text ->
+        if (text.isNotBlank() && !isGenerating) {
+            messages = messages + ToolChatMessage(text, isUser = true)
+            inputText = ""
+            
+            scope.launch {
+                isGenerating = true
+                listState.animateScrollToItem(messages.size)
+                
+                try {
+                    val result = RunAnywhereToolCalling.generateWithTools(
+                        prompt = text,
+                        options = ToolCallingOptions(
+                            maxToolCalls = 3,
+                            autoExecute = true,
+                            temperature = 0.7f,
+                            maxTokens = 512
+                        )
+                    )
+                    
+                    val toolCallInfos = result.toolCalls.mapIndexed { index, call ->
+                        val toolResult = result.toolResults.getOrNull(index)
+                        ToolCallInfo(
+                            toolName = call.toolName,
+                            arguments = call.arguments.entries.joinToString(", ") {
+                                "${it.key}: ${formatToolValue(it.value)}"
+                            },
+                            result = toolResult?.result?.let { formatToolResult(it) },
+                            error = toolResult?.error,
+                            success = toolResult?.success ?: false
+                        )
+                    }
+                    
+                    messages = messages + ToolChatMessage(
+                        text = result.text,
+                        isUser = false,
+                        toolCalls = toolCallInfos
+                    )
+                    listState.animateScrollToItem(messages.size)
+                } catch (e: Exception) {
+                    messages = messages + ToolChatMessage(
+                        text = "Error: ${e.message}",
+                        isUser = false
+                    )
+                } finally {
+                    isGenerating = false
+                }
+            }
+        }
+    }
     
     // Register tools on first composition
     LaunchedEffect(Unit) {
@@ -157,7 +228,11 @@ fun ToolCallingScreen(
             ) {
                 if (messages.isEmpty() && modelService.isLLMLoaded) {
                     item {
-                        ToolCallingEmptyState()
+                        ToolCallingEmptyState(
+                            suggestions = suggestionPrompts,
+                            enabled = !isGenerating,
+                            onSuggestionClick = sendMessage
+                        )
                     }
                 }
                 
@@ -169,8 +244,16 @@ fun ToolCallingScreen(
                 }
             }
             
-            // Input section
+            // Input section with suggestion chips
             if (modelService.isLLMLoaded) {
+                // Suggestion chips row (scrollable, always visible when not generating)
+                if (!isGenerating && messages.isNotEmpty()) {
+                    SuggestionChipsRow(
+                        suggestions = suggestionPrompts,
+                        onSuggestionClick = sendMessage
+                    )
+                }
+                
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     color = SurfaceCard.copy(alpha = 0.8f),
@@ -202,58 +285,7 @@ fun ToolCallingScreen(
                         Spacer(modifier = Modifier.width(8.dp))
                         
                         FloatingActionButton(
-                            onClick = {
-                                if (inputText.isNotBlank() && !isGenerating) {
-                                    val userMessage = inputText
-                                    messages = messages + ToolChatMessage(userMessage, isUser = true)
-                                    inputText = ""
-                                    
-                                    scope.launch {
-                                        isGenerating = true
-                                        listState.animateScrollToItem(messages.size)
-                                        
-                                        try {
-                                            val result = RunAnywhereToolCalling.generateWithTools(
-                                                prompt = userMessage,
-                                                options = ToolCallingOptions(
-                                                    maxToolCalls = 3,
-                                                    autoExecute = true,
-                                                    temperature = 0.7f,
-                                                    maxTokens = 512
-                                                )
-                                            )
-                                            
-                                            // Convert tool calls to UI format
-                                            val toolCallInfos = result.toolCalls.mapIndexed { index, call ->
-                                                val toolResult = result.toolResults.getOrNull(index)
-                                                ToolCallInfo(
-                                                    toolName = call.toolName,
-                                                    arguments = call.arguments.entries.joinToString(", ") { 
-                                                        "${it.key}: ${formatToolValue(it.value)}" 
-                                                    },
-                                                    result = toolResult?.result?.let { formatToolResult(it) },
-                                                    error = toolResult?.error,
-                                                    success = toolResult?.success ?: false
-                                                )
-                                            }
-                                            
-                                            messages = messages + ToolChatMessage(
-                                                text = result.text,
-                                                isUser = false,
-                                                toolCalls = toolCallInfos
-                                            )
-                                            listState.animateScrollToItem(messages.size)
-                                        } catch (e: Exception) {
-                                            messages = messages + ToolChatMessage(
-                                                text = "Error: ${e.message}",
-                                                isUser = false
-                                            )
-                                        } finally {
-                                            isGenerating = false
-                                        }
-                                    }
-                                }
-                            },
+                            onClick = { sendMessage(inputText) },
                             containerColor = if (isGenerating) AccentViolet else if (inputText.isBlank()) TextMuted else AccentOrange
                         ) {
                             if (isGenerating) {
@@ -321,11 +353,15 @@ private fun ToolsInfoCard() {
 }
 
 @Composable
-private fun ToolCallingEmptyState() {
+private fun ToolCallingEmptyState(
+    suggestions: List<String>,
+    enabled: Boolean,
+    onSuggestionClick: (String) -> Unit
+) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(32.dp),
+            .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Icon(
@@ -342,23 +378,142 @@ private fun ToolCallingEmptyState() {
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = "Ask questions that require tools:",
+            text = "Tap a suggestion or type your own prompt",
             style = MaterialTheme.typography.bodyMedium,
             color = TextMuted
         )
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(24.dp))
         
-        // Example prompts
-        listOf(
-            "What's the weather in San Francisco?",
-            "What time is it right now?",
-            "Calculate 15 * 7 + 23"
-        ).forEach { example ->
+        // Weather suggestions
+        SuggestionCategory(
+            icon = Icons.Rounded.Cloud,
+            label = "Weather",
+            color = AccentCyan,
+            prompts = suggestions.filter { it.lowercase().contains("weather") || it.lowercase().contains("rain") },
+            enabled = enabled,
+            onSuggestionClick = onSuggestionClick
+        )
+        
+        Spacer(modifier = Modifier.height(12.dp))
+        
+        // Time suggestions
+        SuggestionCategory(
+            icon = Icons.Rounded.Schedule,
+            label = "Time",
+            color = AccentViolet,
+            prompts = suggestions.filter { it.lowercase().contains("time") || it.lowercase().contains("date") },
+            enabled = enabled,
+            onSuggestionClick = onSuggestionClick
+        )
+        
+        Spacer(modifier = Modifier.height(12.dp))
+        
+        // Calculator suggestions
+        SuggestionCategory(
+            icon = Icons.Rounded.Calculate,
+            label = "Calculator",
+            color = AccentGreen,
+            prompts = suggestions.filter { it.lowercase().contains("calc") || it.lowercase().contains("compute") || it.lowercase().contains("what is") },
+            enabled = enabled,
+            onSuggestionClick = onSuggestionClick
+        )
+    }
+}
+
+@Composable
+private fun SuggestionCategory(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    color: Color,
+    prompts: List<String>,
+    enabled: Boolean,
+    onSuggestionClick: (String) -> Unit
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(bottom = 8.dp)
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = color,
+                modifier = Modifier.size(16.dp)
+            )
+            Spacer(modifier = Modifier.width(6.dp))
             Text(
-                text = "• $example",
-                style = MaterialTheme.typography.bodySmall,
-                color = AccentCyan,
-                modifier = Modifier.padding(vertical = 2.dp)
+                text = label,
+                style = MaterialTheme.typography.labelMedium,
+                color = color
+            )
+        }
+        
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            prompts.forEach { prompt ->
+                SuggestionChip(
+                    text = prompt,
+                    accentColor = color,
+                    enabled = enabled,
+                    onClick = { onSuggestionClick(prompt) }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SuggestionChip(
+    text: String,
+    accentColor: Color,
+    enabled: Boolean,
+    onClick: () -> Unit
+) {
+    Surface(
+        modifier = Modifier
+            .clip(RoundedCornerShape(20.dp))
+            .clickable(enabled = enabled) { onClick() },
+        color = SurfaceCard,
+        shape = RoundedCornerShape(20.dp),
+    ) {
+        Text(
+            text = text,
+            modifier = Modifier
+                .border(1.dp, accentColor.copy(alpha = 0.3f), RoundedCornerShape(20.dp))
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+            style = MaterialTheme.typography.bodySmall,
+            color = if (enabled) TextPrimary else TextMuted,
+            maxLines = 1,
+        )
+    }
+}
+
+/**
+ * Horizontally scrollable suggestion chips shown above the input bar
+ * after the user has sent at least one message.
+ */
+@Composable
+private fun SuggestionChipsRow(
+    suggestions: List<String>,
+    onSuggestionClick: (String) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState())
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        suggestions.forEach { prompt ->
+            SuggestionChip(
+                text = prompt,
+                accentColor = AccentOrange,
+                enabled = true,
+                onClick = { onSuggestionClick(prompt) }
             )
         }
     }

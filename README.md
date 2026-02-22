@@ -1,296 +1,227 @@
-# RunAnywhere Kotlin SDK Starter
+# 📳 alertO  
+### Get alerted when it actually matters.
 
-A comprehensive Android starter app demonstrating the **RunAnywhere SDK** capabilities - privacy-first, on-device AI for Android with Kotlin and Jetpack Compose.
+**alertO** is an Android app that listens for words you care about — and instantly alerts you when they appear.
 
-## Features
+It’s not just about your name.
 
-This starter app showcases all major capabilities of the RunAnywhere SDK:
+It can be:
 
-### 🧠 Chat (LLM Text Generation)
-- On-device text generation using **SmolLM2 360M**
-- Real-time chat interface with message history
-- Powered by llama.cpp backend
+- **Important**
+- **Exam**
+- **Deadline**
+- **Interview**
+- **Urgent**
+- Or literally **any word you choose**
 
-### 🎤 Speech to Text (STT)
-- Real-time speech recognition using **Whisper Tiny**
-- Microphone permission handling
-- Voice activity detection
-- Powered by Sherpa-ONNX backend
+When that word is detected, your phone:
 
-### 🔊 Text to Speech (TTS)
-- Natural voice synthesis using **Piper TTS**
-- Sample texts and custom input
-- High-quality US English voice (Lessac)
-- Powered by Sherpa-ONNX backend
+- 📳 Vibrates  
+- 🔔 Sends a notification  
+- ⚡ Instantly grabs your attention  
 
-### 🎯 Voice Pipeline (Voice Agent)
-- Complete voice conversation pipeline
-- Combines STT → LLM → TTS
-- Real-time conversation flow
-- Status indicators for each stage
-
-## Getting Started
-
-### Prerequisites
-
-- **Android Studio**: Hedgehog (2023.1.1) or later
-- **Minimum SDK**: API 26 (Android 8.0)
-- **Target SDK**: API 35 (Android 15)
-- **Kotlin**: 2.0.21 or later
-- **Java**: 17
-
-### Installation
-
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd starter_apps/kotlinstarterexample
-   ```
-
-2. **Open in Android Studio**
-   - Open Android Studio
-   - Select "Open an Existing Project"
-   - Navigate to the `kotlinstarterexample` folder
-   - Click "OK"
-
-3. **Sync Gradle**
-   - Android Studio will automatically sync Gradle
-   - If not, click "Sync Now" in the notification bar
-
-4. **Run the app**
-   - Connect an Android device or start an emulator
-   - Click the "Run" button (▶️) in Android Studio
-   - Select your device/emulator
-   - The app will build and install
-
-### First Launch
-
-On the first launch:
-
-1. **Home Screen**: You'll see 4 feature cards
-2. **Load Models**: Each feature requires downloading AI models:
-   - **LLM**: ~400 MB (SmolLM2 360M)
-   - **STT**: ~75 MB (Whisper Tiny)
-   - **TTS**: ~20 MB (Piper TTS)
-3. **Grant Permissions**: STT and Voice Pipeline require microphone permission
-4. **Start Using**: Once models are loaded, all features are ready!
-
-## Architecture
-
-### Project Structure
-
-```
-app/src/main/java/com/runanywhere/kotlin_starter_example/
-├── MainActivity.kt                    # App entry point
-├── services/
-│   └── ModelService.kt               # Model management (download, load, unload)
-└── ui/
-    ├── theme/                        # App theme and colors
-    │   ├── Theme.kt
-    │   └── Type.kt
-    ├── components/                   # Reusable UI components
-    │   ├── FeatureCard.kt
-    │   └── ModelLoaderWidget.kt
-    └── screens/                      # Feature screens
-        ├── HomeScreen.kt
-        ├── ChatScreen.kt
-        ├── SpeechToTextScreen.kt
-        ├── TextToSpeechScreen.kt
-        └── VoicePipelineScreen.kt
-```
-
-### Key Technologies
-
-- **Jetpack Compose**: Modern declarative UI
-- **Material 3**: Latest Material Design
-- **Navigation Compose**: Screen navigation
-- **Coroutines & Flow**: Asynchronous operations
-- **ViewModel**: State management
-- **RunAnywhere SDK v0.16.0-test.39**: On-device AI
-
-## RunAnywhere SDK Integration
-
-### Dependencies
-
-The app uses three RunAnywhere packages:
-
-```kotlin
-// build.gradle.kts (app module)
-dependencies {
-    // Core SDK
-    implementation("ai.runanywhere:runanywhere-kotlin:0.16.0-test.39")
-    
-    // Backends
-    implementation("ai.runanywhere:runanywhere-llamacpp:0.16.0-test.39")  // LLM
-    implementation("ai.runanywhere:runanywhere-onnx:0.16.0-test.39")      // STT/TTS
-}
-```
-
-### Initialization
-
-```kotlin
-// MainActivity.kt
-RunAnywhere.initialize(environment = SDKEnvironment.DEVELOPMENT)
-ModelService.registerDefaultModels()
-```
-
-### Model Registration
-
-Models are registered in `ModelService.kt`:
-
-```kotlin
-// LLM Model
-RunAnywhere.registerModel(
-    id = "smollm2-360m-instruct-q8_0",
-    name = "SmolLM2 360M Instruct Q8_0",
-    url = "https://huggingface.co/HuggingFaceTB/SmolLM2-360M-Instruct-GGUF/resolve/main/smollm2-360m-instruct-q8_0.gguf",
-    framework = InferenceFramework.LLAMA_CPP,
-    memoryRequirement = 400_000_000
-)
-
-// STT Model
-RunAnywhere.registerModel(
-    id = "sherpa-onnx-whisper-tiny.en",
-    name = "Sherpa Whisper Tiny (ONNX)",
-    url = "https://github.com/RunanywhereAI/sherpa-onnx/releases/download/runanywhere-models-v1/sherpa-onnx-whisper-tiny.en.tar.gz",
-    framework = InferenceFramework.ONNX,
-    category = ModelCategory.SPEECH_RECOGNITION
-)
-
-// TTS Model
-RunAnywhere.registerModel(
-    id = "vits-piper-en_US-lessac-medium",
-    name = "Piper TTS (US English - Medium)",
-    url = "https://github.com/RunanywhereAI/sherpa-onnx/releases/download/runanywhere-models-v1/vits-piper-en_US-lessac-medium.tar.gz",
-    framework = InferenceFramework.ONNX,
-    category = ModelCategory.SPEECH_SYNTHESIS
-)
-```
-
-### Usage Examples
-
-#### Chat (LLM)
-```kotlin
-val response = RunAnywhere.chat("Explain AI in simple terms")
-```
-
-#### Speech to Text (STT)
-```kotlin
-val audioData: ByteArray = recordAudio()
-val transcription = RunAnywhere.transcribe(audioData)
-```
-
-#### Text to Speech (TTS)
-```kotlin
-RunAnywhere.speak("Hello, world!")
-```
-
-#### Voice Pipeline
-```kotlin
-RunAnywhere.startVoiceSession().collect { event ->
-    when (event) {
-        is VoiceSessionEvent.Listening -> updateUI("Listening...")
-        is VoiceSessionEvent.Transcribed -> updateUI("You: ${event.text}")
-        is VoiceSessionEvent.Thinking -> updateUI("Thinking...")
-        is VoiceSessionEvent.Responded -> updateUI("AI: ${event.text}")
-        is VoiceSessionEvent.Speaking -> updateUI("Speaking...")
-    }
-}
-```
-
-## Performance
-
-### Model Sizes
-- **LLM (SmolLM2 360M)**: ~400 MB
-- **STT (Whisper Tiny)**: ~75 MB
-- **TTS (Piper)**: ~20 MB
-- **Total**: ~495 MB
-
-### Inference Speed
-- **LLM**: 5-15 tokens/sec (device dependent)
-- **STT**: Real-time transcription
-- **TTS**: Real-time synthesis
-
-### Device Requirements
-- **RAM**: Minimum 2GB recommended
-- **Storage**: 1GB free space for models
-- **CPU**: ARMv8 64-bit recommended (supports ARMv7)
-
-## Customization
-
-### Changing Models
-
-To use different models, update `ModelService.kt`:
-
-```kotlin
-companion object {
-    const val LLM_MODEL_ID = "your-model-id"
-    const val STT_MODEL_ID = "your-stt-model-id"
-    const val TTS_MODEL_ID = "your-tts-model-id"
-    
-    fun registerDefaultModels() {
-        RunAnywhere.registerModel(
-            id = LLM_MODEL_ID,
-            name = "Your Model Name",
-            url = "your-model-url",
-            framework = InferenceFramework.LLAMA_CPP
-        )
-        // ... register other models
-    }
-}
-```
-
-### Customizing UI
-
-All UI colors and themes are defined in:
-- `ui/theme/Theme.kt` - Color palette
-- `ui/theme/Type.kt` - Typography
-
-## Troubleshooting
-
-### Models Not Downloading
-- Check internet connection
-- Verify URLs in `ModelService.kt`
-- Check device storage space
-
-### App Crashes on Launch
-- Ensure minimum SDK 26
-- Check Gradle sync completed successfully
-- Verify all dependencies are downloaded
-
-### Microphone Permission Denied
-- Go to Settings → Apps → RunAnywhere Kotlin → Permissions
-- Enable "Microphone" permission
-
-### Poor Performance
-- Use a device with at least 2GB RAM
-- Close other apps to free memory
-- Consider using smaller models
-
-## Privacy & Security
-
-All AI processing happens **100% on-device**:
-- ✅ No data sent to servers
-- ✅ No internet required (after model download)
-- ✅ Complete privacy
-- ✅ Works offline
-
-## Resources
-
-- [RunAnywhere SDK Documentation](https://github.com/RunanywhereAI/runanywhere-sdks)
-- [Kotlin SDK API Reference](../../sdks/sdk/runanywhere-kotlin/Documentation.md)
-- [Release Notes](https://github.com/RunanywhereAI/runanywhere-sdks/releases/tag/v0.16.0-test.39)
-
-## License
-
-See the [LICENSE](../../LICENSE) file for details.
-
-## Support
-
-For issues and questions:
-- GitHub Issues: [runanywhere-sdks/issues](https://github.com/RunanywhereAI/runanywhere-sdks/issues)
-- Documentation: [RunAnywhere Docs](https://github.com/RunanywhereAI/runanywhere-sdks)
+No more missed moments.
 
 ---
 
-**Built with ❤️ using RunAnywhere SDK v0.16.0-test.39**
+## 🎯 Why alertO Exists
+
+We’re constantly distracted.
+
+Scrolling.  
+Gaming.  
+Texting.  
+Multitasking.  
+
+Meanwhile, the most important information slips past us.
+
+**alertO flips the script.**
+
+Instead of you checking your phone again and again —  
+your phone checks for what matters to you.
+
+---
+
+## 🎓 Classroom Use Case
+
+You’re sitting in class.  
+Half listening. Half scrolling.
+
+Professor says:
+
+> “This part is important for the exam.”
+
+You don’t catch it.
+
+But your phone does.
+
+📳 **Buzz.**
+
+You immediately look up and focus.
+
+Or imagine attendance:
+
+Your name is called.  
+You’re distracted.
+
+📳 **Buzz.**
+
+You respond instantly.
+
+No missed attendance. No awkward explanations.
+
+---
+
+## 🧠 Focus Mode for Students
+
+Add keywords like:
+
+- **Important**
+- **Exam**
+- **Test**
+- **Assignment**
+- **Submission**
+- **Deadline**
+
+Whenever these words are spoken or appear on screen, you’re alerted.
+
+You train your brain to react to **signals, not noise.**
+
+---
+
+## 🎮 While Gaming
+
+You’re in the middle of a match.  
+Headphones on. Full focus.
+
+Someone in the room says your name.
+
+You don’t hear it.
+
+But your phone vibrates.
+
+You know it’s important.
+
+No more “I didn’t hear you!”
+
+---
+
+## 💬 In Busy Group Chats
+
+Muted 500-message group.  
+Notifications off.
+
+But if someone types:
+
+- Your name  
+- **Urgent**  
+- **Call me**  
+- **Important**
+
+📳 You get alerted immediately.
+
+You ignore the chaos — but never miss what matters.
+
+---
+
+## 🚶 Texting While Walking
+
+You’re walking on the road.  
+You don’t want to stare at your screen constantly.
+
+Set words like:
+
+- **Now**
+- **Emergency**
+- **Come**
+- **Call**
+
+If they appear →  
+📳 Your phone alerts you instantly.
+
+Safer. Smarter.
+
+---
+
+## 🧑‍💼 Meetings & Online Calls
+
+In online classes or meetings:
+
+You’re multitasking.  
+Someone says:
+
+> “alertO, can you answer this?”  
+> (or your real name)
+
+📳 **Buzz.**
+
+You’re back in the conversation instantly.
+
+---
+
+## 🏠 At Home
+
+Parents calling your name.  
+Roommates asking something.  
+Someone mentioning you.
+
+Even if you don’t hear it clearly —  
+**alertO makes sure you don’t miss it.**
+
+---
+
+## 🔔 It’s Not About More Notifications
+
+It’s about the **right notifications.**
+
+alertO filters the world for you.
+
+You decide what matters.  
+Your phone handles the rest.
+
+---
+
+## 🌟 Who Is This For?
+
+- Students who don’t want to miss important points  
+- Gamers who don’t want to ignore real life  
+- Professionals who multitask  
+- Anyone who wants smarter awareness  
+
+---
+
+## 🔐 Privacy First
+
+Your keywords stay on your device.
+
+No data selling.  
+No spying.  
+No cloud storage of your alerts.
+
+Just intelligent detection, built around you.
+
+---
+
+## 🚀 The Idea
+
+alertO started with one simple problem:
+
+Students miss attendance calls.
+
+But the solution became bigger.
+
+What if your phone could alert you for **any word that matters?**
+
+That’s **alertO.**
+
+---
+
+## ⭐ If You Like This Idea
+
+Give the project a ⭐ on GitHub.  
+
+Share it with someone who:
+
+- Always misses their name  
+- Misses important class moments  
+- Or needs smarter focus  

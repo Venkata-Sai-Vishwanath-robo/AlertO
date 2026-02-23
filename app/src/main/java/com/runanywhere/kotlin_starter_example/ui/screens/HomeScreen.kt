@@ -29,6 +29,7 @@ fun HomeScreen(
     onNavigateToVoicePipeline: () -> Unit,
     onNavigateToToolCalling: () -> Unit,
     onNavigateToVision: () -> Unit,
+    onNavigateToAlertO: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Box(
@@ -67,8 +68,18 @@ fun HomeScreen(
                 columns = GridCells.Fixed(2),
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
-                modifier = Modifier.height(560.dp)
+                modifier = Modifier.height(700.dp)
             ) {
+                item {
+                    FeatureCard(
+                        title = "AlertO",
+                        subtitle = "Wake Word Detector",
+                        icon = Icons.Rounded.Notifications,
+                        gradientColors = listOf(Color(0xFFFF6B6B), Color(0xFFEE5A6F)),
+                        onClick = onNavigateToAlertO
+                    )
+                }
+                
                 item {
                     FeatureCard(
                         title = "Chat",
